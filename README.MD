@@ -20,32 +20,40 @@ Let's dive into a basic example showcasing how `FakeCosmosEasy` can be put to us
 [Fact]
 public async Task SimpleTest()
 {
+    // Initializing a fake Cosmos client with a list of pets.
     var fakeClient = new FakedCosmosClient(createMissingContainers: true);
-    fakeClient.InitContainer(databaseId: "dynamics", containerId: "rr_jobprofile", partitionKey: "_entity", new[]
+    fakeClient.InitContainer(databaseId: "PetDB", containerId: "Pets", partitionKey: "type", new[]
     {
-        new { id = "A1", _entity = "Partition1", property = "Value1" },
-        new { id = "B2", _entity = "Partition2", property = "Value2" },
-        new { id = "C3", _entity = "Partition3", property = "Value3" },
-        // ... Add more sample data as needed
+        new { id = "1", type = "Dog", name = "Buddy" },
+        new { id = "2", type = "Cat", name = "Whiskers" }
     });
 
-    var container = fakeClient.GetContainer("SampleDatabase", "SampleContainer");
-    var queryText = @"SELECT c.id, c._entity FROM c WHERE c.property = @value";
-    
-    var query = new QueryDefinition(queryText).WithParameter("@value", "Value1");
-    var iterator = container.GetItemQueryIterator<dynamic>(query);
+    // Crafting a query to find a specific pet.
+    var query = new QueryDefinition("SELECT * FROM p WHERE p.id = @id").WithParameter("@id", "1");
+    var container = fakeClient.GetContainer(databaseId: "PetDB", containerId: "Pets");
 
+    // Fetching the pet details using the mock container.
+    var iterator = container.GetItemQueryIterator<JObject>(query);
+    var result = new List<JObject>();
     while (iterator.HasMoreResults)
     {
-        var results = await iterator.ReadNextAsync();
-        foreach (var item in results)
+        foreach (var item in await iterator.ReadNextAsync())
         {
-            // Process items here...
+            result.Add(item);
         }
     }
+
+    // 'result' now contains data about "Buddy", the dog.
 }
 
 ```
 
 ## When to consider `FakeCosmosEasy`
 While Cosmos DB emulators are excellent for achieving high fidelity to the real service, they might be overkill for simpler unit tests or when rapid testing iterations are crucial. In such scenarios, consider `FakeCosmosEasy` as a lightweight, swift alternative that trims the fat without compromising on essential functionalities.
+
+## Future Enhancements for FakeCosmosEasy:
+- **Utilizing DynamicLinq:** Our current query parsing approach might benefit from the adaptability of DynamicLinq. This would streamline the process, but handling JObjects remains a challenge as direct property names aren't recognized.
+
+- **Incorporating ANTLR:** ANTLR, a potent parsing tool, can significantly enhance query parsing. However, it presents a steep learning curve.
+
+- **Exploring CosmosSQLANTLR:** The [CosmosSQLANTLR](https://github.com/bchong95/CosmosSQLANTLR) project offers potential insights and components to boost FakeCosmosEasy's parsing abilities.
