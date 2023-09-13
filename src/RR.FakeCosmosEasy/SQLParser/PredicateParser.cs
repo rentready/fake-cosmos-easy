@@ -219,7 +219,7 @@ namespace RR.FakeCosmosEasy.SQLParser
 
         private static Match MatchCondition(string condition)
         {
-            var pattern = $@"(?:c\.(\w+)\s*(=|>|<|!=|<>)?\s*(@\w+))|(NOT\s*)?({GetFunctionPattern()}\((c\.\w+)\))";
+            var pattern = $@"(?:c\.(\w+)\s*(=|>|<|!=|<>|<=|>=)?\s*(@\w+))|(NOT\s*)?({GetFunctionPattern()}\((c\.\w+)\))";
             return Regex.Match(condition, pattern, RegexOptions.IgnoreCase);
         }
 
@@ -244,6 +244,29 @@ namespace RR.FakeCosmosEasy.SQLParser
             // Try to extract and compare as decimal if possible
             try
             {
+                if (paramValue is DateTime dateParam)
+                {
+                    if (token.Type == JTokenType.Date && token.Value<DateTime>() is DateTime tokenDate)
+                    {
+                        switch (op)
+                        {
+                            case "=":
+                                return tokenDate == dateParam;
+                            case ">":
+                                return tokenDate > dateParam;
+                            case ">=":
+                                return tokenDate >= dateParam;
+                            case "<":
+                                return tokenDate < dateParam;
+                            case "<=":
+                                return tokenDate <= dateParam;
+                            case "<>":
+                            case "!=":
+                                return tokenDate != dateParam;
+                        }
+                    }
+                }
+
                 var tokenValue = token.Value<decimal>();
                 var paramDecimal = Convert.ToDecimal(paramValue);
 

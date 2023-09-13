@@ -149,5 +149,28 @@ namespace RR.FakeCosmosEasy.UnitTests.Helpers
             Assert.Single(result);
             Assert.Equal("2", result.First()["id"].ToString());
         }
+
+        [Fact]
+        public void TestFilterByDates()
+        {
+            // Arrange
+            var items = new List<JObject>
+            {
+                new JObject { ["id"] = "1", ["date"] = new DateTime(2023, 9, 10) },
+                new JObject { ["id"] = "2", ["date"] = new DateTime(2023, 9, 9) }
+            };
+            var query = "SELECT * FROM c WHERE c.date > @dateFrom AND c.date <= @dateTo";
+            var parameters = new List<(string Name, object Value)> {
+                ("@dateFrom", DateTime.Parse("2023-9-9")) ,
+                ("@dateTo", new DateTime(2023, 9, 11)) ,
+            };
+
+            // Act
+            var result = items.ApplyFilter(query, parameters);
+
+            // Assert
+            Assert.Single(result);
+            Assert.Equal("1", result.First()["id"].ToString());
+        }
     }
 }
