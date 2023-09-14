@@ -1,5 +1,6 @@
 ﻿using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace RR.FakeCosmosEasy.UnitTests
 {
@@ -41,7 +42,7 @@ namespace RR.FakeCosmosEasy.UnitTests
         }
 
         [Fact]
-        public async Task FindBookings_ReturnsBookingsMatchingVendorIdAndDate()
+        public async Task Should_Return_Two_Records_With_Specified_Id_And_DateRange()
         {
             // Assert
             var fakeClient = new FakedCosmosClient(createMissingContainers: true);
@@ -61,8 +62,8 @@ namespace RR.FakeCosmosEasy.UnitTests
 
             var query = new QueryDefinition(queryText)
                 .WithParameter("@id", targetId)
-                .WithParameter("@dateFrom", new DateTime(2023, 9, 10))
-                .WithParameter("@dateEnd", new DateTime(2023, 9, 11));
+                .WithParameter("@dateFrom", testDate.Date)
+                .WithParameter("@dateEnd", testDate.Date.AddDays(1));
 
             // Act
             var iterator = container.GetItemQueryIterator<JObject>(query);
