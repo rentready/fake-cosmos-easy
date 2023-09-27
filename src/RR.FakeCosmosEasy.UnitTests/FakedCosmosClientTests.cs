@@ -81,5 +81,38 @@ namespace RR.FakeCosmosEasy.UnitTests
 
             Assert.Equal(2, result.Count);
         }
+
+        [Fact]
+        public async Task PatchOperation_Should_Set_Property_To_Null()
+        {
+            // Arrange
+            var fakeClient = new FakedCosmosClient(createMissingContainers: true);
+            var targetId = Guid.NewGuid().ToString();
+
+            // Create a sample record with some initial data.
+            fakeClient.InitContainer(databaseId: "SampleDatabase", containerId: "SampleContainer", partitionKey: "_entity", new[]
+            {
+                new { id = targetId, _entity = "Partition1", name = "John Doe", age = 30 }
+            });
+
+            var container = fakeClient.GetContainer("SampleDatabase", "SampleContainer");
+
+            // Create a patch operation to set 'name' property to null
+            var patchOperations = new List<PatchOperation>
+            {
+                PatchOperation.Set<string>("/name", null)
+            };
+
+            // Act
+            await container.PatchItemAsync<JObject>(targetId, new PartitionKey("Partition1"), patchOperations);
+
+            // Retrieve the item after patching to check the update.
+            var response = await container.ReadItemAsync<JObject>(targetId, new PartitionKey("Partition1"));
+            var updatedItem = response.Resource;
+
+            // Assert
+            Assert.Null(updatedItem["name"].Value<String>());
+            Assert.Equal(30, updatedItem["age"].ToObject<int>());
+        }
     }
 }

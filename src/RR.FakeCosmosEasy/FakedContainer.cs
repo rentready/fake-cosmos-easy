@@ -222,6 +222,10 @@ namespace RR.FakeCosmosEasy
                     if (valueProperty != null)
                     {
                         var value = valueProperty.GetValue(operation);
+                        if (value == null)
+                        {
+                            return JValue.CreateNull();
+                        }
                         return JToken.FromObject(value);
                     }
                 }
