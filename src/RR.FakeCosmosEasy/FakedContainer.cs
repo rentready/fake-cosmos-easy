@@ -41,9 +41,31 @@ namespace RR.FakeCosmosEasy
 
         public override Scripts Scripts => throw new NotImplementedException();
 
-        public override Task<ItemResponse<T>> CreateItemAsync<T>(T item, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        public override async Task<ItemResponse<T>> CreateItemAsync<T>(T item, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            // Convert T item to JObject
+            JObject itemObject = JObject.FromObject(item);
+
+            // Check if partitionKey has a value, and if so, add a new element to the itemObject
+            if (partitionKey.HasValue)
+            {
+                itemObject[_partitionKey] = PartitionKeyToString(partitionKey);
+            }
+
+            // Add the itemObject to the Items list
+            Items.Add(itemObject);
+
+            return new InMemoryItemResponse<T>(itemObject.ToObject<T>());
+        }
+
+        private string PartitionKeyToString(PartitionKey? partitionKey)
+        {
+            if (partitionKey == null)
+            {
+                return String.Empty;
+            }
+            var partitionKeySegments = JArray.Parse(partitionKey.ToString());
+            return string.Join("/", partitionKeySegments.Select(pk => pk.ToString()));
         }
 
         public override Task<ResponseMessage> CreateItemStreamAsync(Stream streamPayload, PartitionKey partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
@@ -166,11 +188,11 @@ namespace RR.FakeCosmosEasy
 
         public override async Task<ItemResponse<T>> PatchItemAsync<T>(string id, PartitionKey partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            var partitionKeyValue = JArray.Parse(partitionKey.ToString())[0].ToString();
+            var partitionKeyValue = PartitionKeyToString(partitionKey);
             // Update or replace the original item in your InMemory storage as needed
             JObject? item = Items.Find(x =>
                 x["id"].ToString() == id &&
-                x[_partitionKey].ToString() == partitionKeyValue);
+                (x[_partitionKey].ToString() == partitionKeyValue || partitionKey == default));
 
             if (item == null)
             {
@@ -254,7 +276,7 @@ namespace RR.FakeCosmosEasy
             var partitionKeyValue = JArray.Parse(partitionKey.ToString())[0].ToString();
             JObject? item = Items.Find(x =>
                 x["id"].ToString() == id &&
-                x[_partitionKey].ToString() == partitionKeyValue);
+                (x[_partitionKey]?.ToString() == partitionKeyValue || partitionKey == default));
 
             if (item == null)
             {

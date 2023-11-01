@@ -1,15 +1,53 @@
 ﻿using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
 using System.Text;
+using System.Threading.Tasks.Dataflow;
 
 namespace RR.FakeCosmosEasy.UnitTests
 {
     public class FakedCosmosClientTests
     {
         [Fact]
+        public async Task CreateItemAsync_should_create_item()
+        {
+            // Arrange
+            var fakeClient = new FakedCosmosClient(createMissingContainers: true);
+            fakeClient.InitContainer(databaseId: "SampleDatabase", containerId: "SampleContainer", partitionKey: "_entity", new JObject[] { });
+
+            var container = fakeClient.GetContainer("SampleDatabase", "SampleContainer");
+
+            // Act
+            await container.CreateItemAsync(new { id = "A1", property = "Value1" }, new PartitionKey("Partition1"));
+
+            // Assert
+            var result = (await container.ReadItemAsync<JObject>("A1", new PartitionKey("Partition1"))).Resource;
+            Assert.Equal("A1", result["id"]);
+            Assert.Equal("Value1", result["property"]);
+            Assert.Equal("Partition1", result["_entity"]);
+        }
+
+        [Fact]
+        public async Task CreateItemAsync_should_create_item_with_unspecified_partition()
+        {
+            // Arrange
+            var fakeClient = new FakedCosmosClient(createMissingContainers: true);
+            fakeClient.InitContainer(databaseId: "SampleDatabase", containerId: "SampleContainer", partitionKey: "_entity", new JObject[] { });
+
+            var container = fakeClient.GetContainer("SampleDatabase", "SampleContainer");
+
+            // Act
+            await container.CreateItemAsync(new { id = "A1", property = "Value1" });
+
+            // Assert
+            var result = (await container.ReadItemAsync<JObject>("A1", default)).Resource;
+            Assert.Equal("A1", result["id"]);
+            Assert.Equal("Value1", result["property"]);
+        }
+
+        [Fact]
         public async Task Should_initialize_containers_and_query_data()
         {
-            // Assert
+            // Arrange
             var fakeClient = new FakedCosmosClient(createMissingContainers: true);
             fakeClient.InitContainer(databaseId: "SampleDatabase", containerId: "SampleContainer", partitionKey: "_entity", new[]
             {
